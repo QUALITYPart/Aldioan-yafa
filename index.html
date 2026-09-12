@@ -1533,23 +1533,23 @@ const ICON_MENU = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" st
 
 let uid = 100;
 const IMAGES = {
-  hero: 'images/hero.jpg',
-  majlis: 'images/majlis.jpg',
-  card1: 'images/card1.jpg',
-  card2: 'images/card2.jpg',
-  card4: 'images/card4.jpg',
-  contact_bg: 'images/contact-bg.jpg',
+  hero: 'hero.jpg',
+  majlis: 'majlis.jpg',
+  card1: 'card1.jpg',
+  card2: 'card2.jpg',
+  card4: 'card4.jpg',
+  contact_bg: 'contact-bg.jpg',
 };
 
 // Keep the two newly supplied community photos as separate replaceable assets.
-IMAGES.card3 = 'images/card3.jpg';
-IMAGES.card5 = 'images/card5.jpg';
+IMAGES.card3 = 'card3.jpg';
+IMAGES.card5 = 'card5.jpg';
 
-IMAGES.journeyBefore = 'images/journey-before.jpg';
-IMAGES.journeyAfter = 'images/journey-after.jpg';
+IMAGES.journeyBefore = 'journey-before.jpg';
+IMAGES.journeyAfter = 'journey-after.jpg';
 
-IMAGES.journeyBuildStart = 'images/journey-build-start.jpg';
-IMAGES.journeyNearFinish = 'images/journey-near-finish.jpg';
+IMAGES.journeyBuildStart = 'journey-build-start.jpg';
+IMAGES.journeyNearFinish = 'journey-near-finish.jpg';
 
 const DATA = {
   projects: [
@@ -1599,10 +1599,10 @@ normalizeFamilyName(DATA);
 
 // المشاريع الأربعة الظاهرة في الصفحة الرئيسية، مع الصور التي تم تزويدها.
 DATA.projects.splice(0, 4,
-  {id:'p1', cover:'a', image:'images/project-p1.jpg', title:'إنشاء مشروع ديوان القفعة', shortDesc:'بناء ديوان (مجلس) رئيسي لدولة القفعة لاستقبال الوفود وإكرام الضيوف وإقامة المناسبات والأعراس الخاصة.', fullDesc:'بناء ديوان (مجلس) رئيسي لدولة القفعة لاستقبال الوفود وإكرام الضيوف وإقامة المناسبات والأعراس الخاصة.', total:7500000, collected:7000000, currency:'دولار', suggested:null, donors:[{n:'حسين هيثم حسين',a:1000,status:'confirmed'},{n:'وضاح احمد علي',a:500,status:'review'},{n:'اصيل عبدالقادر حسين',a:250,status:'waiting'}], donorCount:3},
-  {id:'p2', cover:'b', image:'images/project-p2.jpg', title:'تمهيد ورصف طريق القفعة', shortDesc:'توسيع الطرقات ورصفها بالحجارة لتسهيل مرور المركبات والخدمات.', fullDesc:'توسيع الطرقات ورصفها بالحجارة لتسهيل مرور المركبات والخدمات.', total:350000, collected:350000, currency:'ريال سعودي', suggested:null, donors:[{n:'علي ناصر عبدالحافظ',a:5000,status:'confirmed'},{n:'نبيل هيثم حسين',a:2000,status:'confirmed'},{n:'خالد احمد علي',a:1500,status:'review'}], donorCount:3},
-  {id:'p3', cover:'c', image:'images/project-p3.jpg', title:'بناء خزان أرضي لمياه المجاري', shortDesc:'بناء وإنشاء خزان أرضي لخدمة دورات مياه الديوان.', fullDesc:'بناء وإنشاء خزان أرضي لخدمة دورات مياه الديوان.', total:170000, collected:170000, currency:'ريال سعودي', suggested:null, donors:[{n:'جمال عبدالقادر حسين',a:500,status:'waiting'},{n:'حسين هيثم حسين',a:300,status:'confirmed'}], donorCount:2},
-  {id:'p4', cover:'a', image:'images/project-p4.jpg', title:'إنشاء مشروع شبكة ستارلنك', shortDesc:'شراء وتجهيز شبكة واي فاي عامة باشتراكات وأسعار حصرية، ودخل يغطي مصاريف تشغيل الديوان.', fullDesc:'شراء وتجهيز شبكة واي فاي عامة باشتراكات وأسعار حصرية، ودخل يغطي مصاريف تشغيل الديوان.', total:8000, collected:4900, currency:'ريال سعودي', suggested:null, donors:[{n:'وضاح احمد علي',a:400,status:'confirmed'},{n:'اصيل عبدالقادر حسين',a:200,status:'waiting'}], donorCount:2}
+  {id:'p1', cover:'a', image:'project-p1.jpg', title:'إنشاء مشروع ديوان القفعة', shortDesc:'بناء ديوان (مجلس) رئيسي لدولة القفعة لاستقبال الوفود وإكرام الضيوف وإقامة المناسبات والأعراس الخاصة.', fullDesc:'بناء ديوان (مجلس) رئيسي لدولة القفعة لاستقبال الوفود وإكرام الضيوف وإقامة المناسبات والأعراس الخاصة.', total:7500000, collected:7000000, currency:'دولار', suggested:null, donors:[{n:'حسين هيثم حسين',a:1000,status:'confirmed'},{n:'وضاح احمد علي',a:500,status:'review'},{n:'اصيل عبدالقادر حسين',a:250,status:'waiting'}], donorCount:3},
+  {id:'p2', cover:'b', image:'project-p2.jpg', title:'تمهيد ورصف طريق القفعة', shortDesc:'توسيع الطرقات ورصفها بالحجارة لتسهيل مرور المركبات والخدمات.', fullDesc:'توسيع الطرقات ورصفها بالحجارة لتسهيل مرور المركبات والخدمات.', total:350000, collected:350000, currency:'ريال سعودي', suggested:null, donors:[{n:'علي ناصر عبدالحافظ',a:5000,status:'confirmed'},{n:'نبيل هيثم حسين',a:2000,status:'confirmed'},{n:'خالد احمد علي',a:1500,status:'review'}], donorCount:3},
+  {id:'p3', cover:'c', image:'project-p3.jpg', title:'بناء خزان أرضي لمياه المجاري', shortDesc:'بناء وإنشاء خزان أرضي لخدمة دورات مياه الديوان.', fullDesc:'بناء وإنشاء خزان أرضي لخدمة دورات مياه الديوان.', total:170000, collected:170000, currency:'ريال سعودي', suggested:null, donors:[{n:'جمال عبدالقادر حسين',a:500,status:'waiting'},{n:'حسين هيثم حسين',a:300,status:'confirmed'}], donorCount:2},
+  {id:'p4', cover:'a', image:'project-p4.jpg', title:'إنشاء مشروع شبكة ستارلنك', shortDesc:'شراء وتجهيز شبكة واي فاي عامة باشتراكات وأسعار حصرية، ودخل يغطي مصاريف تشغيل الديوان.', fullDesc:'شراء وتجهيز شبكة واي فاي عامة باشتراكات وأسعار حصرية، ودخل يغطي مصاريف تشغيل الديوان.', total:8000, collected:4900, currency:'ريال سعودي', suggested:null, donors:[{n:'وضاح احمد علي',a:400,status:'confirmed'},{n:'اصيل عبدالقادر حسين',a:200,status:'waiting'}], donorCount:2}
 );
 
 const state = {
