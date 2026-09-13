@@ -1394,6 +1394,13 @@ function mapProjectRow(row, donations, imageRows){
     .map(image => image.image_url)
     .filter(Boolean);
   const images = [...new Set([row.cover_image_url, ...galleryImages].filter(Boolean))].slice(0, PROJECT_IMAGE_MAX_COUNT);
+  // Some donations succeed in being recorded (donations table) but fail to bump
+  // projects.collected_amount when the donor isn't an admin (e.g. an RLS policy
+  // on the "projects" table only allows admins to UPDATE it). To make sure the
+  // displayed total is always correct regardless of who donated, we derive the
+  // real collected amount by summing every recorded donation for the project,
+  // and never show less than that — even if the stored column is stale.
+  const donatedTotal = projectDonations.reduce((sum, d) => sum + asNumber(d.amountSar), 0);
   return {
     id: row.id,
     cover: 'a',
@@ -1403,7 +1410,7 @@ function mapProjectRow(row, donations, imageRows){
     shortDesc: row.short_description || '',
     fullDesc: row.full_description || '',
     total: asNumber(row.total_cost),
-    collected: asNumber(row.collected_amount),
+    collected: Math.max(asNumber(row.collected_amount), donatedTotal),
     suggested: row.suggested_donation == null ? null : asNumber(row.suggested_donation),
     currency: row.currency || 'ريال سعودي',
     donors: projectDonations,
