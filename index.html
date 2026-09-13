@@ -2416,14 +2416,10 @@ async function confirmPledge(){
     return;
   }
 
-  const newCollected = Math.min(project.total, asNumber(project.collected) + amountSar);
-  const { error: updateError } = await supabaseClient
-    .from('projects')
-    .update({ collected_amount: newCollected })
-    .eq('id', id);
-  if(updateError){
-    console.error('Project collected update failed:', updateError);
-  }
+  // No need to update projects.collected_amount from the client anymore —
+  // a database trigger (fn_recalc_project_collected) recalculates it
+  // automatically and reliably from the donations table for every donor,
+  // admin or member alike. See project notes for the trigger SQL.
 
   closeModal();
   const equivNote = currency !== 'ريال سعودي' ? ` (يعادل ${fmt(Math.round(amountSar))} ر.س)` : '';
