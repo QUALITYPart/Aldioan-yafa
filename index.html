@@ -284,6 +284,10 @@
   .progress-track { height:7px; border-radius:100px; background:var(--teal-tint); overflow:hidden; margin-bottom:10px; }
   .progress-fill { height:100%; border-radius:100px; background:linear-gradient(90deg, var(--gold), var(--gold-deep)); }
   .project-meta { display:flex; align-items:center; justify-content:space-between; }
+  .amt-sar-equiv { font-size:10px; font-weight:500; color:var(--ink-muted); margin-inline-start:3px; }
+  .amt-block { display:flex; flex-direction:column; flex:0 0 auto; line-height:1.3; }
+  .amt-block .amt-equiv { font-size:10px; font-weight:500; color:var(--ink-muted); margin-top:1px; }
+  .currency-breakdown-line { font-size:11px; color:var(--ink-muted); font-weight:600; margin:6px 0 10px; }
   .donor-avatars { display:flex; align-items:center; }
   .donor-avatars .av { width:24px; height:24px; border-radius:50%; border:2px solid var(--surface); margin-inline-start:-8px; background:linear-gradient(135deg, var(--teal), var(--teal-dark)); display:flex; align-items:center; justify-content:center; font-size:9px; color:#fff; font-weight:700; }
   .donor-avatars .av:first-child { margin-inline-start:0; }
@@ -308,14 +312,14 @@
   [data-theme="dark"] .chip { color:var(--gold); }
   .chip.chip-main { background:var(--teal); color:#fff; border-color:var(--teal); }
   .donor-list h4 { margin-bottom:10px; }
-  .donor-list ul { list-style:none; margin:0 0 16px; padding:0; display:flex; flex-direction:column; gap:8px; }
-  .donor-list li { display:flex; flex-direction:column; gap:6px; font-size:12.5px; padding-bottom:8px; border-bottom:1px dashed var(--line); }
-  .donor-list li:last-child { border-bottom:none; padding-bottom:0; }
-  .donor-row-top { display:flex; align-items:center; justify-content:space-between; }
-  .donor-row-bottom { display:flex; justify-content:flex-start; }
-  .donor-list .who { display:flex; align-items:center; gap:8px; }
-  .donor-list .who .av { width:24px; height:24px; margin:0; }
-  .donor-list .amt { font-weight:700; color:var(--ink); }
+  .donor-list ul { list-style:none; margin:0 0 16px; padding:0; display:grid; grid-template-columns:minmax(0,1fr) auto auto; column-gap:10px; row-gap:0; align-items:center; }
+  .donor-list li { display:contents; }
+  .donor-cell { display:flex; align-items:center; padding:9px 0; font-size:12.5px; }
+  .donor-name { color:var(--ink); font-weight:700; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; justify-self:stretch; }
+  .donor-amt-cell, .donor-status-cell { justify-self:start; }
+  .donor-list .amt { font-weight:700; color:var(--ink); white-space:nowrap; }
+  .donor-divider { grid-column:1 / -1; height:0; border-bottom:1px dashed var(--line); }
+  .donor-list li:last-child .donor-divider { display:none; }
   .expand-actions { display:flex; gap:8px; margin-bottom:4px; }
   .btn-donate { flex:1; background:var(--teal); color:#fff; border:none; font-family:inherit; font-weight:800; font-size:13.5px; padding:12px; border-radius:100px; cursor:pointer; }
   .btn-whatsapp { width:46px; flex-shrink:0; background:#E9F5EE; border:1px solid rgba(58,168,103,0.25); color:#278452; border-radius:100px; display:flex; align-items:center; justify-content:center; cursor:pointer; }
@@ -1374,6 +1378,8 @@ function mapProjectRow(row, donations, imageRows){
       userId: donation.user_id,
       n: donation.donor_name,
       a: asNumber(donation.amount),
+      currency: donation.currency || 'ريال سعودي',
+      amountSar: donation.amount_sar != null ? asNumber(donation.amount_sar) : asNumber(donation.amount),
       status: donation.status,
       createdAt: donation.created_at
     }))
@@ -1441,8 +1447,13 @@ async function loadLiveData(){
         .order('sort_order', {ascending:true}),
       supabaseClient
         .from('donations')
-        .select('id,project_id,user_id,donor_name,amount,status,created_at,confirmed_at')
-        .order('created_at', {ascending:false})
+        .select('id,project_id,user_id,donor_name,amount,currency,amount_sar,status,created_at,confirmed_at')
+        .order('created_at', {ascending:false}),
+      supabaseClient
+        .from('settings')
+        .select('usd_rate,yer_rate')
+        .eq('id', 1)
+        .maybeSingle()
     ];
 
     if(state.currentUserId){
@@ -1483,11 +1494,18 @@ async function loadLiveData(){
       DATA.members = [];
     }
 
-    const [projectsResult, newsResult, imageResult, donationsResult, votesResult, suggestionsResult] =
+    const [projectsResult, newsResult, imageResult, donationsResult, settingsResult, votesResult, suggestionsResult] =
       await Promise.all(requests);
     const firstError = [projectsResult, newsResult, imageResult, donationsResult, votesResult, suggestionsResult]
       .find(result => result?.error);
     if(firstError?.error) throw firstError.error;
+
+    if(settingsResult && !settingsResult.error && settingsResult.data){
+      state.rates = {
+        usd: asNumber(settingsResult.data.usd_rate) || state.rates.usd,
+        yer: asNumber(settingsResult.data.yer_rate) || state.rates.yer
+      };
+    }
 
     const donations = donationsResult.data || [];
     const projects = (projectsResult.data || []).map(project => mapProjectRow(project, donations, imageResult.data || []));
@@ -1614,14 +1632,36 @@ const state = {
   accounts:[],
   archiveFilter:'all',
   votedPolls:{},
-  identityOpen:0
+  identityOpen:0,
+  rates:{ usd:0.2667, yer:135 } // كم يساوي الريال السعودي الواحد بالدولار وبالريال اليمني (قيم افتراضية حتى يحدّثها المشرف)
 };
 
 /* ================= HELPERS ================= */
 function initials(name){ return name.trim().split(' ')[0][0]; }
+function shortName(name){
+  const parts = (name || '').trim().split(/\s+/).filter(Boolean);
+  return parts.length > 2 ? `${parts[0]} ${parts[parts.length - 1]}` : (name || '');
+}
 function fmt(n){ return n.toLocaleString('ar-SA'); }
 function pct(collected,total){ return Math.min(100, Math.round((collected/total)*100)); }
 function statusLabel(s){ return {waiting:'بانتظار الدفع', review:'قيد المراجعة', confirmed:'تم تأكيد الدفع'}[s] || 'بانتظار الدفع'; }
+function toSar(amount, currency){
+  if(currency === 'دولار') return amount / (state.rates.usd || 0.2667);
+  if(currency === 'ريال يمني') return amount / (state.rates.yer || 135);
+  return amount; // ريال سعودي
+}
+function currencyBreakdown(donors){
+  const totals = {};
+  (donors || []).forEach(d => {
+    const c = d.currency || 'ريال سعودي';
+    totals[c] = (totals[c] || 0) + asNumber(d.a);
+  });
+  const order = ['ريال سعودي', 'دولار', 'ريال يمني'];
+  return order
+    .filter(c => totals[c] > 0)
+    .map(c => `${fmt(totals[c])} ${c}`)
+    .join(' + ');
+}
 function archiveStatusLabel(s){ return {completed:'مكتمل', cancelled:'ملغى', postponed:'مؤجل', incomplete:'لم يكتمل'}[s] || 'مكتمل'; }
 function showToast(msg){
   const t = document.getElementById('toast');
@@ -1701,6 +1741,7 @@ function renderSideMenu(){
   footer.innerHTML = state.userName
     ? `
       <button class="btn-secondary" style="width:100%" onclick="closeSideMenu(); openAccountModal()">${state.userName} — ${state.isAdmin?'مشرف':'عضو'}</button>
+      ${state.isAdmin ? `<button class="btn-secondary" style="width:100%;margin-top:8px" onclick="closeSideMenu(); openExchangeRatesModal()">💱 أسعار الصرف</button>` : ''}
       <button class="btn-logout" onclick="closeSideMenu(); doLogout()" aria-label="تسجيل الخروج">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:16px;height:16px;vertical-align:-3px;margin-left:5px"><path d="M10 5H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h4"/><path d="M14 16l4-4-4-4M9 12h9"/></svg>
         تسجيل الخروج
@@ -2134,7 +2175,7 @@ function projectCardHTML(p, opts){
   opts = opts || {};
   const archived = !!opts.archived;
   const percent = pct(p.collected, p.total);
-  const currency = p.currency || 'ر.س';
+  const currency = 'ريال سعودي';
   const adminIcons = state.isAdmin ? `
     <div class="admin-actions">
       ${!archived ? `<button class="admin-icon-btn" onclick="event.stopPropagation(); openProjectFormModal('${p.id}')">${ICON_EDIT}</button>` : ''}
@@ -2156,11 +2197,18 @@ function projectCardHTML(p, opts){
            <option value="confirmed" ${donorStatus==='confirmed'?'selected':''}>مؤكد الدفع</option>
          </select>`
       : `<span class="donor-status-badge status-${donorStatus}">${statusLabel(donorStatus)}</span>`;
-    return `<li>
-        <div class="donor-row-top"><span class="who"><span class="av">${initials(d.n)}</span> ${d.n}</span><span class="amt">${fmt(d.a)} ر.س</span></div>
-        <div class="donor-row-bottom">${statusPart}</div>
+    const donorCurrency = d.currency || 'ريال سعودي';
+    const amtBlock = donorCurrency === 'ريال سعودي'
+      ? `<span class="amt-block"><span class="amt">${fmt(d.a)} ر.س</span></span>`
+      : `<span class="amt-block"><span class="amt">${fmt(d.a)} ${donorCurrency}</span><span class="amt-equiv">${fmt(Math.round(d.amountSar))} ر.س</span></span>`;
+    return `<li class="donor-item">
+        <span class="donor-name donor-cell" title="${d.n}">${shortName(d.n)}</span>
+        <span class="donor-cell donor-amt-cell">${amtBlock}</span>
+        <span class="donor-cell donor-status-cell">${statusPart}</span>
+        <span class="donor-divider"></span>
       </li>`;
   }).join('');
+  const breakdown = currencyBreakdown(p.donors);
 
   const donateSection = archived ? '' : `
     <div class="donation-row">
@@ -2218,6 +2266,7 @@ function projectCardHTML(p, opts){
             <div class="figure-total"><b>${fmt(p.total)} ${currency}</b><span>التكلفة الكلية</span></div>
         </div>
         <div class="progress-track"><div class="progress-fill" style="width:${percent}%"></div></div>
+        ${breakdown ? `<div class="currency-breakdown-line">حسب العملة: ${breakdown}</div>` : ''}
         <div class="project-meta">
           <div style="display:flex; align-items:center;">
             <div class="donor-avatars">${p.donors.slice(0,3).map(d=>`<span class="av">${initials(d.n)}</span>`).join('')}</div>
@@ -2271,10 +2320,15 @@ function shareWhatsapp(projectId){
     (rank[a.status] ?? 3) - (rank[b.status] ?? 3)
   );
   const donorLines = donors.length
-    ? donors.map((donor, index) =>
-      `${index + 1}. ${donor.n} — ${fmt(donor.a)} ${project.currency || 'ر.س'} — ${statusLabel(donor.status)}`
-    ).join('\n')
+    ? donors.map((donor, index) => {
+        const dCurrency = donor.currency || 'ريال سعودي';
+        const amtPart = dCurrency === 'ريال سعودي'
+          ? `${fmt(donor.a)} ر.س`
+          : `${fmt(donor.a)} ${dCurrency} (يعادل ${fmt(Math.round(donor.amountSar))} ر.س)`;
+        return `${index + 1}. ${donor.n} — ${amtPart} — ${statusLabel(donor.status)}`;
+      }).join('\n')
     : 'لا توجد تبرعات مسجلة حتى الآن.';
+  const breakdown = currencyBreakdown(project.donors);
   const totalDonation = asNumber(project.collected);
   const remaining = Math.max(0, asNumber(project.total) - totalDonation);
   const message = [
@@ -2289,9 +2343,10 @@ function shareWhatsapp(projectId){
     donorLines,
     '',
     'الملخص المالي:',
-    `• إجمالي التكلفة: ${fmt(asNumber(project.total))} ${project.currency || 'ر.س'}`,
-    `• إجمالي التبرع: ${fmt(totalDonation)} ${project.currency || 'ر.س'}`,
-    `• المتبقي: ${fmt(remaining)} ${project.currency || 'ر.س'}`
+    `• إجمالي التكلفة: ${fmt(asNumber(project.total))} ر.س`,
+    `• إجمالي التبرع: ${fmt(totalDonation)} ر.س`,
+    `• المتبقي: ${fmt(remaining)} ر.س`,
+    ...(breakdown ? [`• حسب العملة: ${breakdown}`] : [])
   ].join('\n');
   const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
   const popup = window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
@@ -2313,7 +2368,14 @@ function openPledgeModal(id, amount){
   openModal(`
     <h3 class="modal-title">تأكيد التبرع</h3>
     <p class="modal-sub">أدخل المبلغ الذي ترغب بالتبرع به. سيظهر تبرعك بحالة «بانتظار الدفع» حتى يؤكد المشرف استلام المبلغ.</p>
-    <div class="field"><label>المبلغ (ر.س)</label><input id="pd-amount" type="number" value="${amount||''}" placeholder="أدخل المبلغ"></div>
+    <div class="field"><label>المبلغ</label><input id="pd-amount" type="number" value="${amount||''}" placeholder="أدخل المبلغ"></div>
+    <div class="field"><label>العملة</label>
+      <select id="pd-currency">
+        <option value="ريال سعودي" selected>ريال سعودي</option>
+        <option value="دولار">دولار</option>
+        <option value="ريال يمني">ريال يمني</option>
+      </select>
+    </div>
     <input type="hidden" id="pd-id" value="${id}">
     <div class="demo-row">
       <button class="btn-secondary" onclick="closeModal()">إلغاء</button>
@@ -2324,23 +2386,73 @@ function openPledgeModal(id, amount){
 async function confirmPledge(){
   const id = document.getElementById('pd-id').value;
   const amt = Number(document.getElementById('pd-amount').value);
+  const currency = document.getElementById('pd-currency').value || 'ريال سعودي';
   if(!amt || amt<=0){ showToast('الرجاء إدخال مبلغ صحيح'); return; }
   if(!supabaseClient || !state.currentUserId){ showToast('تعذر الاتصال بقاعدة البيانات'); return; }
-  const { error } = await supabaseClient.from('donations').insert({
+  const amountSar = toSar(amt, currency);
+  const project = DATA.projects.find(x=>x.id===id) || DATA.archive.find(x=>x.id===id);
+  if(!project){ showToast('تعذر العثور على المشروع'); return; }
+
+  const { error: insertError } = await supabaseClient.from('donations').insert({
     project_id: id,
     user_id: state.currentUserId,
     donor_name: state.userName || 'عضو الديوان',
     amount: amt,
+    currency: currency,
+    amount_sar: amountSar,
     status: 'waiting',
     confirmed_at: null
   });
-  if(error){
-    console.error('Donation insert failed:', error);
+  if(insertError){
+    console.error('Donation insert failed:', insertError);
     showToast('تعذر تسجيل التبرع. حاول مرة أخرى.');
     return;
   }
+
+  const newCollected = Math.min(project.total, asNumber(project.collected) + amountSar);
+  const { error: updateError } = await supabaseClient
+    .from('projects')
+    .update({ collected_amount: newCollected })
+    .eq('id', id);
+  if(updateError){
+    console.error('Project collected update failed:', updateError);
+  }
+
   closeModal();
-  await reloadLiveData('تم تسجيل تبرعك — الحالة: بانتظار الدفع');
+  const equivNote = currency !== 'ريال سعودي' ? ` (يعادل ${fmt(Math.round(amountSar))} ر.س)` : '';
+  await reloadLiveData(`تم تسجيل تبرعك بمبلغ ${fmt(amt)} ${currency}${equivNote} — الحالة: بانتظار الدفع`);
+}
+/* ---- exchange rates (admin) ---- */
+function openExchangeRatesModal(){
+  if(!state.isAdmin) return;
+  openModal(`
+    <h3 class="modal-title">أسعار الصرف</h3>
+    <p class="modal-sub">حدّد كم يساوي الريال السعودي الواحد بالعملات الأخرى. يُستخدم هذا لتحويل تبرعات الأعضاء تلقائيًا إلى الريال السعودي.</p>
+    <div class="field"><label>الريال السعودي الواحد = كم دولار؟</label><input id="fx-usd" type="number" step="0.0001" value="${state.rates.usd}" placeholder="0.2667"></div>
+    <div class="field"><label>الريال السعودي الواحد = كم ريال يمني؟</label><input id="fx-yer" type="number" step="0.01" value="${state.rates.yer}" placeholder="135"></div>
+    <div class="demo-row">
+      <button class="btn-secondary" onclick="closeModal()">إلغاء</button>
+      <button class="btn-primary" onclick="saveExchangeRates()">حفظ</button>
+    </div>
+  `);
+}
+async function saveExchangeRates(){
+  const usd = Number(document.getElementById('fx-usd').value);
+  const yer = Number(document.getElementById('fx-yer').value);
+  if(!usd || usd<=0 || !yer || yer<=0){ showToast('الرجاء إدخال أسعار صرف صحيحة'); return; }
+  if(!supabaseClient || !state.isAdmin){ showToast('تعذر الاتصال بقاعدة البيانات'); return; }
+  const { error } = await supabaseClient
+    .from('settings')
+    .update({ usd_rate: usd, yer_rate: yer, updated_at: new Date().toISOString() })
+    .eq('id', 1);
+  if(error){
+    console.error('Exchange rate update failed:', error);
+    showToast('تعذر حفظ أسعار الصرف');
+    return;
+  }
+  state.rates = { usd, yer };
+  closeModal();
+  showToast('تم تحديث أسعار الصرف بنجاح');
 }
 async function setDonorStatus(projectId, donorIndex, val){
   const p = DATA.projects.find(x=>x.id===projectId) || DATA.archive.find(x=>x.id===projectId);
